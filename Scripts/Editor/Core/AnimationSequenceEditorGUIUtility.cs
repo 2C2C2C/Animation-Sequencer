@@ -1,13 +1,11 @@
-﻿#if DOTWEEN_ENABLED
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace BrunoMikoski.AnimationSequencer
 {
-    public static class AnimationSequenceEditorGUIUtility
+    public static partial class AnimationSequenceEditorGUIUtility
     {
         private static Dictionary<Type, GUIContent> cachedTypeToDisplayName;
         public static Dictionary<Type, GUIContent> TypeToDisplayName
@@ -18,7 +16,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedTypeToDisplayName;
             }
         }
-        
+
         private static Dictionary<Type, GUIContent> cachedTypeToInstance;
         public static Dictionary<Type, GUIContent> TypeToParentDisplay
         {
@@ -29,9 +27,8 @@ namespace BrunoMikoski.AnimationSequencer
             }
         }
 
-        
-        private static Dictionary<Type, DOTweenActionBase> typeToInstanceCache;
-        public static Dictionary<Type, DOTweenActionBase> TypeToInstanceCache
+        private static Dictionary<Type, object> typeToInstanceCache;
+        public static Dictionary<Type, object> TypeToInstanceCache
         {
             get
             {
@@ -39,25 +36,13 @@ namespace BrunoMikoski.AnimationSequencer
                 return typeToInstanceCache;
             }
         }
-        
-        private static DOTweenActionsAdvancedDropdown cachedDOTweenActionsDropdown;
-        public static DOTweenActionsAdvancedDropdown DOTweenActionsDropdown
-        {
-            get
-            {
-                if (cachedDOTweenActionsDropdown == null)
-                    cachedDOTweenActionsDropdown = new DOTweenActionsAdvancedDropdown(new AdvancedDropdownState());
-                return cachedDOTweenActionsDropdown;
-            }
-        }
-        
 
-        public static GUIContent GetTypeDisplayName(Type targetBaseDOTweenType)
+        public static GUIContent GetTypeDisplayName(Type targetBaseTweenType)
         {
-            if (TypeToDisplayName.TryGetValue(targetBaseDOTweenType, out GUIContent result))
+            if (TypeToDisplayName.TryGetValue(targetBaseTweenType, out GUIContent result))
                 return result;
 
-            return new GUIContent(targetBaseDOTweenType.Name);
+            return new GUIContent(targetBaseTweenType.Name);
         }
 
         private static void CacheDisplayTypes()
@@ -67,52 +52,25 @@ namespace BrunoMikoski.AnimationSequencer
 
             cachedTypeToDisplayName = new Dictionary<Type, GUIContent>();
             cachedTypeToInstance = new Dictionary<Type, GUIContent>();
-            typeToInstanceCache = new Dictionary<Type, DOTweenActionBase>();
-            
-            TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom(typeof(DOTweenActionBase));
-            for (int i = 0; i < types.Count; i++)
-            {
-                Type type = types[i];
-                if (type.IsAbstract)
-                    continue;
-                
-                DOTweenActionBase doTweenActionBaseInstance = Activator.CreateInstance(type) as DOTweenActionBase;
-                if (doTweenActionBaseInstance == null)
-                    continue;
-                GUIContent guiContent = new GUIContent(doTweenActionBaseInstance.DisplayName);
-                if (doTweenActionBaseInstance.TargetComponentType != null)
-                {
-                    GUIContent targetComponentGUIContent = EditorGUIUtility.ObjectContent(null, doTweenActionBaseInstance.TargetComponentType);
-                    guiContent.image = targetComponentGUIContent.image;
-                    GUIContent parentGUIContent = new GUIContent(doTweenActionBaseInstance.TargetComponentType.Name)
-                    {
-                        image = targetComponentGUIContent.image
-                    };
-                    cachedTypeToInstance.Add(type, parentGUIContent);
-                }
-                
-                cachedTypeToDisplayName.Add(type, guiContent);
-                typeToInstanceCache.Add(type, doTweenActionBaseInstance);
-            }
+            typeToInstanceCache = new Dictionary<Type, object>();
+
+#if DOTWEEN_ENABLED
+            AppendDOTweenDisplayTypes();
+#elif PRIMETWEEN_ENABLED
+            AppendPrimeTweenDisplayTypes();
+#endif
         }
-        
+
         public static bool CanActionBeAppliedToTarget(Type targetActionType, GameObject targetGameObject)
         {
             if (targetGameObject == null)
                 return false;
 
-            if (TypeToInstanceCache.TryGetValue(targetActionType, out DOTweenActionBase actionBaseInstance))
-            {
-                Type requiredComponent = actionBaseInstance.TargetComponentType;
-                
-                if (requiredComponent == typeof(Transform))
-                    return true;
-                    
-                if (requiredComponent == typeof(RectTransform))
-                    return targetGameObject.transform is RectTransform;
-
-                return targetGameObject.GetComponent(requiredComponent) != null;
-            }
+#if DOTWEEN_ENABLE  
+            return PrimeTweenAnimationSequenceEditorGUIUtility.CanDOTweenActionBeAppliedToTarget(targetActionType, targetGameObject);
+#elif PRIMETWEEN_ENABLED
+            return AnimationSequenceEditorGUIUtility.CanPrimeTweenActionBeAppliedToTarget(targetActionType, targetGameObject);
+#endif
             return false;
         }
 
@@ -130,7 +88,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedBackButtonGUIContent;
             }
         }
-        
+
         private static GUIContent cachedStepBackGUIContent;
         internal static GUIContent StepBackGUIContent
         {
@@ -145,7 +103,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedStepBackGUIContent;
             }
         }
-        
+
         private static GUIContent cachedStepNextGUIContent;
         internal static GUIContent StepNextGUIContent
         {
@@ -160,7 +118,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedStepNextGUIContent;
             }
         }
-        
+
         private static GUIContent cachedStopButtonGUIContent;
         internal static GUIContent StopButtonGUIContent
         {
@@ -174,7 +132,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedStopButtonGUIContent;
             }
         }
-        
+
         private static GUIContent cachedForwardButtonGUIContent;
         internal static GUIContent ForwardButtonGUIContent
         {
@@ -188,7 +146,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedForwardButtonGUIContent;
             }
         }
-        
+
         private static GUIContent cachedPauseButtonGUIContent;
         internal static GUIContent PauseButtonGUIContent
         {
@@ -202,7 +160,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedPauseButtonGUIContent;
             }
         }
-        
+
         private static GUIContent cachedPlayButtonGUIContent;
         internal static GUIContent PlayButtonGUIContent
         {
@@ -216,7 +174,7 @@ namespace BrunoMikoski.AnimationSequencer
                 return cachedPlayButtonGUIContent;
             }
         }
-        
+
         private static GUIContent cachedSaveAsDefaultGUIContent;
         internal static GUIContent SaveAsDefaultButtonGUIContent
         {
@@ -232,4 +190,3 @@ namespace BrunoMikoski.AnimationSequencer
         }
     }
 }
-#endif

@@ -4,7 +4,8 @@
     "references": [
         "DOTween.Modules",
         "Unity.TextMeshPro",
-        "UniTask"
+        "UniTask",
+        "PrimeTween.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -28,6 +29,11 @@
             "name": "com.demigiant.dotween",
             "expression": "",
             "define": "DOTWEEN_ENABLED"
+        },
+        {
+            "name": "com.kyrylokuzyk.primetween",
+            "expression": "",
+            "define": "PRIMETWEEN_ENABLED"
         }
     ],
     "noEngineReferences": false

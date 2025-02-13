@@ -9,7 +9,8 @@ using UnityEngine.UI;
 namespace BrunoMikoski.AnimationSequencer
 {
     [Serializable]
-    public sealed class ColorGraphicDOTween : DOTweenActionBase
+    public sealed class ColorGraphicDOTween
+    : DOTweenActionBase
     {
         public override Type TargetComponentType => typeof(Graphic);
         public override string DisplayName => "Color Graphic";

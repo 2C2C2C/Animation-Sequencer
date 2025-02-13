@@ -1,5 +1,4 @@
-﻿#if DOTWEEN_ENABLED
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace BrunoMikoski.AnimationSequencer
@@ -8,20 +7,13 @@ namespace BrunoMikoski.AnimationSequencer
     public abstract class GameObjectAnimationStep : AnimationStepBase
     {
         [SerializeField]
-        protected GameObject target;
-        public GameObject Target
-        {
-            get => target;
-            set => target = value;
-        }
+        private GameObject target;
 
         [SerializeField]
-        protected float duration = 1;
-        public float Duration
-        {
-            get => duration;
-            set => duration = value;
-        }
+        private float duration = 1; // why it is protected, since child class can use dat get property
+     
+        public GameObject Target => target;
+        public float Duration => duration;
 
         public void SetTarget(GameObject newTarget)
         {
@@ -29,4 +21,3 @@ namespace BrunoMikoski.AnimationSequencer
         }
     }
 }
-#endif
