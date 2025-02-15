@@ -2,13 +2,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
+using UnityEngine;
+using UnityEngine.Events;
 #if UNITASK_ENABLED
 using System.Threading;
 using Cysharp.Threading.Tasks;
 #endif
-using DG.Tweening;
-using UnityEngine;
-using UnityEngine.Events;
 
 namespace BrunoMikoski.AnimationSequencer
 {
@@ -16,18 +16,6 @@ namespace BrunoMikoski.AnimationSequencer
     [AddComponentMenu("UI/Animation Sequencer Controller", 200)]
     public partial class AnimationSequencerController : MonoBehaviour
     {
-        [SerializeReference]
-        private AnimationStepBase[] animationSteps = Array.Empty<AnimationStepBase>();
-        public AnimationStepBase[] AnimationSteps => animationSteps;
-
-        [SerializeField]
-        private UpdateType updateType = UpdateType.Normal;
-        [SerializeField]
-        private bool timeScaleIndependent = false;
-        [SerializeField]
-        private AutoplayType autoplayMode = AutoplayType.Awake;
-        [SerializeField]
-        protected bool startPaused;
         [SerializeField]
         private float playbackSpeed = 1f;
         public float PlaybackSpeed => playbackSpeed;
@@ -38,90 +26,20 @@ namespace BrunoMikoski.AnimationSequencer
         [SerializeField]
         private bool autoKill = true;
 
-        [SerializeField]
-        private UnityEvent onStartEvent = new UnityEvent();
-
-        public UnityEvent OnStartEvent
-        {
-            get => onStartEvent;
-            protected set => onStartEvent = value;
-        }
-
-        [SerializeField]
-        private UnityEvent onFinishedEvent = new UnityEvent();
-
-        public UnityEvent OnFinishedEvent
-        {
-            get => onFinishedEvent;
-            protected set => onFinishedEvent = value;
-        }
-
-        [SerializeField]
-        private UnityEvent onProgressEvent = new UnityEvent();
-        public UnityEvent OnProgressEvent => onProgressEvent;
-
-        private Sequence playingSequence;
-        public Sequence PlayingSequence => playingSequence;
-
 #if UNITY_EDITOR
         private bool requiresReset = false;
 #endif
 
+        public bool HasValidSequence => playingSequence != null;
         public bool IsPlaying => playingSequence != null && playingSequence.IsActive() && playingSequence.IsPlaying();
         public bool IsPaused => playingSequence != null && playingSequence.IsActive() && !playingSequence.IsPlaying();
 
-        [SerializeField, Range(0, 1)]
-        private float progress = -1;
-
-        protected virtual void Awake()
-        {
-            progress = -1;
-            if (autoplayMode != AutoplayType.Awake)
-                return;
-
-            Autoplay();
-        }
-
-        protected virtual void OnEnable()
-        {
-            if (autoplayMode != AutoplayType.OnEnable)
-                return;
-
-            Autoplay();
-        }
-
-        private void Autoplay()
-        {
-            Play();
-            if (startPaused)
-                playingSequence.Pause();
-        }
-
-        protected virtual void OnDisable()
-        {
-            if (autoplayMode != AutoplayType.OnEnable)
-                return;
-
-            if (playingSequence == null)
-                return;
-
-            ClearPlayingSequence();
-            // Reset the object to its initial state so that if it is re-enabled the start values are correct for
-            // regenerating the Sequence.
-            ResetToInitialState();
-        }
-
-        protected virtual void OnDestroy()
-        {
-            ClearPlayingSequence();
-        }
-
-        public virtual void Play()
+        public void Play()
         {
             Play(null);
         }
 
-        public virtual void Play(Action onCompleteCallback)
+        public void Play(Action onCompleteCallback)
         {
             ClearPlayingSequence();
 
@@ -134,7 +52,7 @@ namespace BrunoMikoski.AnimationSequencer
             playingSequence.Play();
         }
 
-        public virtual void PlayForward(bool resetFirst = true, Action onCompleteCallback = null)
+        public void PlayForward(bool resetFirst = true, Action onCompleteCallback = null)
         {
             if (playingSequence == null)
                 Play();
@@ -151,15 +69,7 @@ namespace BrunoMikoski.AnimationSequencer
             playingSequence.PlayForward();
         }
 
-        public virtual void SetTime(float seconds, bool andPlay = true)
-        {
-            if (playingSequence == null)
-                Play();
-
-            playingSequence.Goto(seconds, andPlay);
-        }
-
-        public virtual void SetProgress(float targetProgress, bool andPlay = true)
+        public void SetProgress(float targetProgress, bool andPlay = true)
         {
             if (playingSequence == null)
                 Play();
@@ -171,15 +81,7 @@ namespace BrunoMikoski.AnimationSequencer
             SetTime(finalTime, andPlay);
         }
 
-        public virtual void TogglePause()
-        {
-            if (playingSequence == null)
-                return;
-
-            playingSequence.TogglePause();
-        }
-
-        public virtual void Pause()
+        public void Pause()
         {
             if (!IsPlaying)
                 return;
@@ -187,16 +89,15 @@ namespace BrunoMikoski.AnimationSequencer
             playingSequence.Pause();
         }
 
-        public virtual void Resume()
+        public void Resume()
         {
-            if (playingSequence == null)
+            if (HasValidSequence && !playingSequence.IsPlaying())
                 return;
 
             playingSequence.Play();
         }
 
-
-        public virtual void Complete(bool withCallbacks = true)
+        public void Complete(bool withCallbacks = true)
         {
             if (playingSequence == null)
                 return;
@@ -204,15 +105,7 @@ namespace BrunoMikoski.AnimationSequencer
             playingSequence.Complete(withCallbacks);
         }
 
-        public virtual void Rewind(bool includeDelay = true)
-        {
-            if (playingSequence == null)
-                return;
-
-            playingSequence.Rewind(includeDelay);
-        }
-
-        public virtual void Kill(bool complete = false)
+        public void Kill(bool complete = false)
         {
             if (!IsPlaying)
                 return;
@@ -220,13 +113,7 @@ namespace BrunoMikoski.AnimationSequencer
             playingSequence.Kill(complete);
         }
 
-        public virtual IEnumerator PlayEnumerator()
-        {
-            Play();
-            yield return playingSequence.WaitForCompletion();
-        }
-
-        public virtual Sequence GenerateSequence()
+        public Sequence GenerateSequence()
         {
             Sequence sequence = DOTween.Sequence();
 
@@ -271,7 +158,7 @@ namespace BrunoMikoski.AnimationSequencer
             return sequence;
         }
 
-        public virtual void ResetToInitialState()
+        public void ResetToInitialState()
         {
             progress = -1.0f;
             for (int i = animationSteps.Length - 1; i >= 0; i--)
@@ -287,38 +174,13 @@ namespace BrunoMikoski.AnimationSequencer
             playingSequence = null;
         }
 
-        public void SetAutoplayMode(AutoplayType autoplayType)
-        {
-            autoplayMode = autoplayType;
-        }
+        //private void Update()
+        //{
+        //    if (progress == -1.0f)
+        //        return;
 
-        public void SetTimeScaleIndependent(bool targetTimeScaleIndependent)
-        {
-            timeScaleIndependent = targetTimeScaleIndependent;
-        }
-
-        public void SetUpdateType(UpdateType targetUpdateType)
-        {
-            updateType = targetUpdateType;
-        }
-
-        public void SetAutoKill(bool targetAutoKill)
-        {
-            autoKill = targetAutoKill;
-        }
-
-        public void SetLoops(int targetLoops)
-        {
-            loops = targetLoops;
-        }
-
-        private void Update()
-        {
-            if (progress == -1.0f)
-                return;
-
-            SetProgress(progress);
-        }
+        //    SetProgress(progress);
+        //}
 
 #if UNITY_EDITOR
 
@@ -342,69 +204,57 @@ namespace BrunoMikoski.AnimationSequencer
 
 #endif
 
-        public bool TryGetStepAtIndex<T>(int index, out T result) where T : AnimationStepBase
-        {
-            if (index < 0 || index > animationSteps.Length - 1)
-            {
-                result = null;
-                return false;
-            }
+        //public bool TryGetStepAtIndex<T>(int index, out T result) where T : AnimationStepBase
+        //{
+        //    if (index < 0 || index > animationSteps.Length - 1)
+        //    {
+        //        result = null;
+        //        return false;
+        //    }
 
-            result = animationSteps[index] as T;
-            return result != null;
-        }
+        //    result = animationSteps[index] as T;
+        //    return result != null;
+        //}
 
-        public void ReplaceTarget<T>(GameObject targetGameObject) where T : GameObjectAnimationStep
-        {
-            for (int i = animationSteps.Length - 1; i >= 0; i--)
-            {
-                AnimationStepBase animationStepBase = animationSteps[i];
-                if (animationStepBase == null)
-                    continue;
+        //public void ReplaceTarget<T>(GameObject targetGameObject) where T : GameObjectAnimationStep
+        //{
+        //    for (int i = animationSteps.Length - 1; i >= 0; i--)
+        //    {
+        //        AnimationStepBase animationStepBase = animationSteps[i];
+        //        if (animationStepBase == null)
+        //            continue;
 
-                if (animationStepBase is not T gameObjectAnimationStep)
-                    continue;
+        //        if (animationStepBase is not T gameObjectAnimationStep)
+        //            continue;
 
-                gameObjectAnimationStep.SetTarget(targetGameObject);
-            }
-        }
+        //        gameObjectAnimationStep.SetTarget(targetGameObject);
+        //    }
+        //}
 
-        public void ReplaceTargets(params (GameObject original, GameObject target)[] replacements)
-        {
-            for (int i = 0; i < replacements.Length; i++)
-            {
-                (GameObject original, GameObject target) replacement = replacements[i];
-                ReplaceTargets(replacement.original, replacement.target);
-            }
-        }
+        //public void ReplaceTargets(params (GameObject original, GameObject target)[] replacements)
+        //{
+        //    for (int i = 0; i < replacements.Length; i++)
+        //    {
+        //        (GameObject original, GameObject target) replacement = replacements[i];
+        //        ReplaceTargets(replacement.original, replacement.target);
+        //    }
+        //}
 
-        public void ReplaceTargets(GameObject originalTarget, GameObject newTarget)
-        {
-            for (int i = animationSteps.Length - 1; i >= 0; i--)
-            {
-                AnimationStepBase animationStepBase = animationSteps[i];
-                if (animationStepBase == null)
-                    continue;
+        //public void ReplaceTargets(GameObject originalTarget, GameObject newTarget)
+        //{
+        //    for (int i = animationSteps.Length - 1; i >= 0; i--)
+        //    {
+        //        AnimationStepBase animationStepBase = animationSteps[i];
+        //        if (animationStepBase == null)
+        //            continue;
 
-                if (animationStepBase is not GameObjectAnimationStep gameObjectAnimationStep)
-                    continue;
+        //        if (animationStepBase is not GameObjectAnimationStep gameObjectAnimationStep)
+        //            continue;
 
-                if (gameObjectAnimationStep.Target == originalTarget)
-                    gameObjectAnimationStep.SetTarget(newTarget);
-            }
-        }
-
-#if UNITASK_ENABLED
-
-        public async UniTask PlayAsync(CancellationToken cancellationTokenSource = default)
-        {
-            if (cancellationTokenSource == default)
-                cancellationTokenSource = this.GetCancellationTokenOnDestroy();
-            
-            await PlayEnumerator().ToUniTask(PlayerLoopTiming.Update, cancellationTokenSource);
-        }
-
-#endif
+        //        if (gameObjectAnimationStep.Target == originalTarget)
+        //            gameObjectAnimationStep.SetTarget(newTarget);
+        //    }
+        //}
 
     }
 }
